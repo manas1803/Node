@@ -1,22 +1,24 @@
 const http = require("http");
 const fs = require("fs");
+const url = require("url");
 
 const htmlPage = fs.readFileSync("./index.html", "utf-8");
+const workItemPage = fs.readFileSync("./work-item.html", "utf-8");
 const apiData = fs.readFileSync("./data.json", "utf-8");
+const apiDataObj = JSON.parse(apiData)
 
 const replaceTemplate = (template, element) => {
-  let output = template.replace("{%ITEM_ID%}", element.id);
-  output = output.replace("{%ITEM_TITLE%}", element.title);
+  let output = template.replaceAll("{%ITEM_ID%}", element.id);
+  output = output.replaceAll("{%ITEM_TITLE%}", element.title);
   return output;
 };
 
 const server = http.createServer((request, response) => {
-  const pathName = request.url;
-
-  switch (pathName) {
+  const { pathname, query } = url.parse(request.url, true);
+  switch (pathname) {
     case "/":
     case "/dashboard":
-      const output = JSON.parse(apiData)
+      const output = apiDataObj
         .map((element) => replaceTemplate(htmlPage, element))
         .join("");
       response.writeHead(200, {
@@ -26,7 +28,13 @@ const server = http.createServer((request, response) => {
 
       break;
     case "/product":
-      response.end("We are in products page");
+      response.writeHead(200, {
+        "Content-type": "text/html",
+      });
+      
+      const item = (query.id) ? apiDataObj[query.id] : apiDataObj[0];
+      const outputProducts = replaceTemplate(workItemPage, item);
+      response.end(outputProducts);
       break;
     case "/api":
       response.writeHead(200, {
